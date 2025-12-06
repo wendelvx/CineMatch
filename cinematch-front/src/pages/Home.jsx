@@ -111,7 +111,7 @@ export default function Home() {
             </div>
 
             <p className="mt-12 text-gray-600 text-sm">
-                Desenvolvido com React + Node + Prisma
+                Depois vou assistir stranger things!
             </p>
         </div>
     );
