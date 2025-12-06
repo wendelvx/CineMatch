@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const roomRoutes = require('./routes/roomRoutes');
 const movieRoutes = require('./routes/movieRoutes');
+const voteRoutes = require('./routes/voteRoutes');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -25,6 +26,8 @@ app.get('/', (req, res) => {
 
 app.use('/api/rooms', roomRoutes);
 app.use('/api/movies', movieRoutes);
+app.use('/api/votes', voteRoutes);
+
 
 const start = async () => {
   try {
