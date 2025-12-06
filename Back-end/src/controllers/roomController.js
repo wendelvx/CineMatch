@@ -45,3 +45,15 @@ exports.joinRoom = async (req, res) => {
     return res.status(500).json({ success: false, error: 'Erro interno ao entrar na sala.' });
   }
 };
+
+exports.checkStatus = async (req, res) => {
+    const sessionUuid = req.headers['x-session-uuid'];
+    if (!sessionUuid) return res.status(401).json({ error: 'Header hiatos.' });
+
+    try {
+        const status = await roomService.getRoomStatus(sessionUuid);
+        return res.json(status);
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro ao checar status.' });
+    }
+};

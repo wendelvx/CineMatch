@@ -12,6 +12,7 @@ model Room {
   code      String   @unique @db.VarChar(10)
   createdAt DateTime @default(now()) @map("created_at")
   isActive  Boolean  @default(true) @map("is_active")
+  matchedMovieId Int?    @map("matched_movie_id")
 
   // Relacionamento reverso (One-to-Many)
   participants Participant[]

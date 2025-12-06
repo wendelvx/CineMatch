@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const crypto = require('crypto');
 const { generateRoomCode } = require('../utils/codeGenerator');
 
 exports.createRoom = async () => {
@@ -50,4 +51,22 @@ exports.joinRoom = async (code) => {
   });
 
   return participant;
+};
+
+exports.getRoomStatus = async (sessionUuid) => {
+    const participant = await prisma.participant.findFirst({
+        where: { sessionUuid },
+        include: { room: true }
+    });
+
+    if (!participant) throw new Error('Participante não autenticado.');
+
+    if (participant.room.matchedMovieId) {
+        return {
+            hasMatch: true,
+            movieId: participant.room.matchedMovieId
+        };
+    }
+
+    return { hasMatch: false };
 };

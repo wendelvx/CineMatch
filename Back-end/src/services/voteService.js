@@ -38,10 +38,14 @@ exports.registerVote = async (sessionUuid, tmdbMovieId, voteType) => {
   });
 
   if (totalLikes >= totalParticipants) {
+    await prisma.room.update({
+        where: { id: participant.roomId },
+        data: { matchedMovieId: Number(tmdbMovieId), isActive: false } // Opcional: fechar a sala
+    });
+
     return { 
       match: true, 
       movieId: tmdbMovieId,
-      movieTitle: "Você pode buscar o titulo no front ou fazer uma chamada extra aqui"
     };
   }
 

@@ -22,8 +22,8 @@ exports.getMovies = async (genreId, page = 1) => {
       id: movie.id,
       title: movie.title,
       overview: movie.overview,
-      poster_path: movie.poster_path, // O front vai montar a URL completa da imagem
-      release_date: movie.release_date ? movie.release_date.split('-')[0] : 'N/A', // Apenas o ano
+      poster_path: movie.poster_path, 
+      release_date: movie.release_date ? movie.release_date.split('-')[0] : 'N/A', 
       vote_average: movie.vote_average
     }));
 
