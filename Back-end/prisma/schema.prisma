@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Room {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(10)
+  createdAt DateTime @default(now()) @map("created_at")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  // Relacionamento reverso (One-to-Many)
+  participants Participant[]
+
+  @@map("rooms") // Mapeia para tabela 'rooms' no banco
+}
+
+model Participant {
+  id          Int      @id @default(autoincrement())
+  sessionUuid String   @map("session_uuid") @db.Char(36)
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  // Foreign Key
+  roomId Int  @map("room_id")
+  room   Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  votes Vote[]
+
+  // Garante que o mesmo UUID não entre 2x na mesma sala
+  @@unique([sessionUuid, roomId])
+  @@map("participants")
+}
+
+enum VoteType {
+  LIKE
+  DISLIKE
+}
+
+model Vote {
+  id          Int      @id @default(autoincrement())
+  tmdbMovieId Int      @map("tmdb_movie_id")
+  voteType    VoteType @map("vote_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Foreign Key
+  participantId Int
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  // Constraints de Performance e Integridade
+  
+  // 1. Um usuário não pode votar 2x no mesmo filme
+  @@unique([participantId, tmdbMovieId]) 
+  
+  // 2. O ÍNDICE DE OURO: Acelera a busca por quantos Likes um filme tem
+  @@index([tmdbMovieId, voteType]) 
+  
+  @@map("votes")
+}
