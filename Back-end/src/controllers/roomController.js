@@ -59,12 +59,16 @@ exports.joinRoom = async (req, res) => {
 
 exports.checkStatus = async (req, res) => {
     const sessionUuid = req.headers['x-session-uuid'];
+    const { code } = req.query; 
+
     if (!sessionUuid) return res.status(401).json({ error: 'Header hiatos.' });
+    if (!code) return res.status(400).json({ error: 'Código da sala necessário.' });
 
     try {
-        const status = await roomService.getRoomStatus(sessionUuid);
+        const status = await roomService.getRoomStatus(sessionUuid, code);
         return res.json(status);
     } catch (error) {
+        console.error(error);
         return res.status(500).json({ error: 'Erro ao checar status.' });
     }
 };

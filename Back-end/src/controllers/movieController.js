@@ -1,4 +1,6 @@
 const tmdbService = require('../services/tmdbService');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 exports.listMovies = async (req, res) => {
   try {

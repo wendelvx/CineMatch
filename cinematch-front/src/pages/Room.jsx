@@ -4,19 +4,24 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { Loader2 } from 'lucide-react';
 import api from '../services/api';
 import MovieCard from '../components/MovieCard';
-import MatchModal from '../components/MatchModal'; // <--- Importamos o modal novo
+import MatchModal from '../components/MatchModal';
 
 export default function Room() {
   const { code } = useParams();
+  
   const [movies, setMovies] = useState([]);
+  
+  const [allLoadedMovies, setAllLoadedMovies] = useState([]); 
+  
   const [loading, setLoading] = useState(true);
-  const [matchedMovie, setMatchedMovie] = useState(null); // Estado para guardar o Match
+  const [matchedMovie, setMatchedMovie] = useState(null);
 
   useEffect(() => {
     async function fetchMovies() {
       try {
-        const response = await api.get('/movies?genre=27&page=1');
+        const response = await api.get(`/movies?roomCode=${code}&page=1`);
         setMovies(response.data);
+        setAllLoadedMovies(response.data); 
       } catch (error) {
         console.error("Erro ao buscar filmes", error);
       } finally {
@@ -24,21 +29,22 @@ export default function Room() {
       }
     }
     fetchMovies();
-  }, []);
+  }, [code]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
       if (matchedMovie) return; 
 
       try {
-        const response = await api.get('/rooms/status'); 
+        const response = await api.get('/rooms/status', {
+            params: { code: code }
+        }); 
         
         if (response.data.hasMatch) {
           const matchId = response.data.movieId;
           
-         
-          const movieDetails = movies.find(m => m.id === matchId) || { 
-             title: 'Filme Escolhido!', 
+          const movieDetails = allLoadedMovies.find(m => m.id === matchId) || { 
+             title: 'Carregando detalhes...', 
              id: matchId, 
              poster_path: null 
           };
@@ -51,11 +57,12 @@ export default function Room() {
       }
     }, 3000); 
 
-    return () => clearInterval(interval); // Limpa ao sair da tela
-  }, [matchedMovie, movies]);
+    return () => clearInterval(interval);
+  }, [matchedMovie, movies, code, allLoadedMovies]); 
 
 
   const handleVote = async (movie, voteType) => {
+    // Remove APENAS da lista visual 'movies'
     setMovies((prev) => prev.filter((m) => m.id !== movie.id));
 
     try {
@@ -63,8 +70,9 @@ export default function Room() {
         movieId: movie.id,
         vote: voteType,
         movieTitle: movie.title,
+        roomCode: code 
       });
-     
+      
     } catch (error) {
       console.error("Erro ao enviar voto", error);
     }
@@ -119,6 +127,7 @@ export default function Room() {
   );
 }
 
+// DraggableCard continua igual...
 function DraggableCard({ movie, isFront, onVote }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-30, 30]);

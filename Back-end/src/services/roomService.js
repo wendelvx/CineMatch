@@ -76,13 +76,20 @@ exports.joinRoom = async (code, userUuid) => {
   return participant;
 };
 
-exports.getRoomStatus = async (sessionUuid) => {
+exports.getRoomStatus = async (sessionUuid, roomCode) => {
     const participant = await prisma.participant.findFirst({
-        where: { sessionUuid },
+        where: { 
+            sessionUuid: sessionUuid,
+            room: {
+                code: roomCode 
+            }
+        },
         include: { room: true }
     });
 
-    if (!participant) throw new Error('Participante não autenticado.');
+    if (!participant) {
+        return { hasMatch: false };
+    }
 
     if (participant.room.matchedMovieId) {
         return {
