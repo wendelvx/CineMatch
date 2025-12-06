@@ -1,8 +1,15 @@
 const roomService = require('../services/roomService');
 
 exports.createRoom = async (req, res) => {
+  const sessionUuid = req.headers['x-session-uuid'];
+  const { genreId } = req.body;
+
+  if (!sessionUuid) {
+    return res.status(400).json({ error: 'UUID de sessão é obrigatório.' });
+  }
+const selectedGenre = genreId || '28';
   try {
-    const room = await roomService.createRoom();
+    const room = await roomService.createRoom(sessionUuid,selectedGenre);
     
     return res.status(201).json({
       success: true,
@@ -22,13 +29,13 @@ exports.createRoom = async (req, res) => {
 
 exports.joinRoom = async (req, res) => {
   const { code } = req.body; 
+  const sessionUuid = req.headers['x-session-uuid'];
 
-  if (!code) {
-    return res.status(400).json({ error: 'Código da sala é obrigatório.' });
-  }
+  if (!code) return res.status(400).json({ error: 'Código da sala é obrigatório.' });
+  if (!sessionUuid) return res.status(400).json({ error: 'UUID de sessão é obrigatório.' });
 
   try {
-    const participant = await roomService.joinRoom(code);
+    const participant = await roomService.joinRoom(code, sessionUuid);
 
     return res.status(200).json({
       success: true,
@@ -37,6 +44,10 @@ exports.joinRoom = async (req, res) => {
     });
 
   } catch (error) {
+    if (error.code === 'P2002') {
+         return res.status(200).json({ success: true, message: 'Você já estava nesta sala.' });
+    }
+
     if (error.message === 'Sala não encontrada.' || error.message === 'Esta sala já foi encerrada.') {
       return res.status(404).json({ success: false, error: error.message });
     }

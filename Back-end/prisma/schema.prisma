@@ -13,6 +13,7 @@ model Room {
   createdAt DateTime @default(now()) @map("created_at")
   isActive  Boolean  @default(true) @map("is_active")
   matchedMovieId Int?    @map("matched_movie_id")
+  genreId        String   @map("genre_id") @default("28") // Default 28 = Ação
 
   // Relacionamento reverso (One-to-Many)
   participants Participant[]

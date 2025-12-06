@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `rooms` ADD COLUMN `genre_id` VARCHAR(191) NOT NULL DEFAULT '28';

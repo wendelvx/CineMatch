@@ -1,9 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const crypto = require('crypto');
 const { generateRoomCode } = require('../utils/codeGenerator');
 
-exports.createRoom = async () => {
+exports.createRoom = async (creatorUuid,genreId) => {
   let uniqueCode = '';
   let isUnique = false;
 
@@ -18,17 +17,30 @@ exports.createRoom = async () => {
     }
   }
 
-  const room = await prisma.room.create({
-    data: {
-      code: uniqueCode,
-      isActive: true
-    }
+ 
+  const result = await prisma.$transaction(async (tx) => {
+    const room = await tx.room.create({
+      data: {
+        code: uniqueCode,
+        isActive: true,
+        genreId: String(genreId)
+      }
+    });
+
+    await tx.participant.create({
+      data: {
+        sessionUuid: creatorUuid, 
+        roomId: room.id
+      }
+    });
+
+    return room;
   });
 
-  return room;
+  return result;
 };
 
-exports.joinRoom = async (code) => {
+exports.joinRoom = async (code, userUuid) => {
   const room = await prisma.room.findUnique({
     where: { code: code }
   });
@@ -41,11 +53,22 @@ exports.joinRoom = async (code) => {
     throw new Error('Esta sala já foi encerrada.');
   }
 
-  const sessionUuid = crypto.randomUUID();
+  const existingParticipant = await prisma.participant.findUnique({
+    where: {
+      sessionUuid_roomId: {
+        sessionUuid: userUuid,
+        roomId: room.id
+      }
+    }
+  });
+
+  if (existingParticipant) {
+    return existingParticipant; 
+  }
 
   const participant = await prisma.participant.create({
     data: {
-      sessionUuid: sessionUuid,
+      sessionUuid: userUuid,
       roomId: room.id
     }
   });

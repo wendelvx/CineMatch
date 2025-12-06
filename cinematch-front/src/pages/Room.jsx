@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'; // Nova importação
-import { Loader2, X, Heart } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import api from '../services/api';
 import MovieCard from '../components/MovieCard';
+import MatchModal from '../components/MatchModal'; // <--- Importamos o modal novo
 
 export default function Room() {
   const { code } = useParams();
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [matchedMovie, setMatchedMovie] = useState(null); // Estado para guardar o Match
 
   useEffect(() => {
     async function fetchMovies() {
       try {
         const response = await api.get('/movies?genre=27&page=1');
-        setMovies(response.data); 
+        setMovies(response.data);
       } catch (error) {
         console.error("Erro ao buscar filmes", error);
       } finally {
@@ -24,9 +26,36 @@ export default function Room() {
     fetchMovies();
   }, []);
 
-  const handleVote = async (movie, voteType) => {
-    console.log(`Votou ${voteType} no filme: ${movie.title}`);
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (matchedMovie) return; 
 
+      try {
+        const response = await api.get('/rooms/status'); 
+        
+        if (response.data.hasMatch) {
+          const matchId = response.data.movieId;
+          
+         
+          const movieDetails = movies.find(m => m.id === matchId) || { 
+             title: 'Filme Escolhido!', 
+             id: matchId, 
+             poster_path: null 
+          };
+
+          setMatchedMovie(movieDetails);
+          clearInterval(interval); 
+        }
+      } catch (error) {
+        console.error("Erro no polling:", error);
+      }
+    }, 3000); 
+
+    return () => clearInterval(interval); // Limpa ao sair da tela
+  }, [matchedMovie, movies]);
+
+
+  const handleVote = async (movie, voteType) => {
     setMovies((prev) => prev.filter((m) => m.id !== movie.id));
 
     try {
@@ -35,6 +64,7 @@ export default function Room() {
         vote: voteType,
         movieTitle: movie.title,
       });
+     
     } catch (error) {
       console.error("Erro ao enviar voto", error);
     }
@@ -51,6 +81,8 @@ export default function Room() {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-900 overflow-hidden relative">
       
+      {matchedMovie && <MatchModal movie={matchedMovie} />}
+
       <div className="absolute top-6 z-10 bg-black/50 px-6 py-2 rounded-full backdrop-blur-sm border border-white/10">
         <span className="text-gray-400 text-sm uppercase tracking-widest mr-2">SALA</span>
         <span className="text-white font-mono font-bold text-xl">{code}</span>
@@ -60,9 +92,7 @@ export default function Room() {
         <AnimatePresence>
           {movies.map((movie, index) => {
             if (index > 1) return null;
-
             const isFront = index === 0;
-
             return (
               <DraggableCard 
                 key={movie.id} 
@@ -71,13 +101,13 @@ export default function Room() {
                 onVote={handleVote} 
               />
             );
-          }).reverse()} {/* Reverse visual para o index 0 ficar no topo (z-index) */}
+          }).reverse()}
         </AnimatePresence>
 
-        {movies.length === 0 && (
+        {movies.length === 0 && !matchedMovie && (
           <div className="text-center text-gray-500 animate-pulse">
-            <p className="text-xl font-bold mb-2">Acabaram os filmes!</p>
-            <p className="text-sm">Aguardando o match...</p>
+            <p className="text-xl font-bold mb-2">Aguardando...</p>
+            <p className="text-sm">Seus amigos ainda estão votando.</p>
           </div>
         )}
       </div>
@@ -91,11 +121,11 @@ export default function Room() {
 
 function DraggableCard({ movie, isFront, onVote }) {
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-30, 30]); // Gira o card conforme arrasta
-  const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0, 1, 1, 1, 0]); // Opcional: fade out
+  const rotate = useTransform(x, [-200, 200], [-30, 30]);
+  const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0, 1, 1, 1, 0]);
 
   const handleDragEnd = (event, info) => {
-    const threshold = 100; // Distância mínima para contar o voto
+    const threshold = 100;
     if (info.offset.x > threshold) {
       onVote(movie, 'LIKE');
     } else if (info.offset.x < -threshold) {
@@ -105,19 +135,14 @@ function DraggableCard({ movie, isFront, onVote }) {
 
   return (
     <motion.div
-      style={{ 
-        x, 
-        rotate, 
-        zIndex: isFront ? 10 : 0,
-        scale: isFront ? 1 : 0.95, // O card de trás fica menorzinho (efeito pilha)
-      }} 
-      drag={isFront ? "x" : false} // Só arrasta se for o da frente
-      dragConstraints={{ left: 0, right: 0 }} // Faz voltar pro centro se soltar antes do limite
+      style={{ x, rotate, zIndex: isFront ? 10 : 0, scale: isFront ? 1 : 0.95 }} 
+      drag={isFront ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.7}
       onDragEnd={handleDragEnd}
       initial={{ scale: 0.95, opacity: 0 }}
       animate={{ scale: isFront ? 1 : 0.95, opacity: 1 }}
-      exit={{ x: x.get() < 0 ? -500 : 500, opacity: 0, transition: { duration: 0.2 } }} // Animação de saída voando
+      exit={{ x: x.get() < 0 ? -500 : 500, opacity: 0, transition: { duration: 0.2 } }}
       className="absolute w-full h-full px-4 cursor-grab active:cursor-grabbing"
     >
       <MovieCard movie={movie} />
@@ -134,7 +159,6 @@ function DraggableCard({ movie, isFront, onVote }) {
       >
         NOPE
       </motion.div>
-
     </motion.div>
   );
 }

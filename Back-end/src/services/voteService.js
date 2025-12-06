@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 exports.registerVote = async (sessionUuid, tmdbMovieId, voteType) => {
- 
+  
   const participant = await prisma.participant.findFirst({
     where: { sessionUuid: sessionUuid },
     include: { room: true } 
@@ -27,6 +27,7 @@ exports.registerVote = async (sessionUuid, tmdbMovieId, voteType) => {
     where: { roomId: participant.roomId }
   });
 
+  // 4. Conta quantos LIKES esse filme específico tem na sala
   const totalLikes = await prisma.vote.count({
     where: {
       tmdbMovieId: Number(tmdbMovieId),
@@ -37,10 +38,18 @@ exports.registerVote = async (sessionUuid, tmdbMovieId, voteType) => {
     }
   });
 
+  console.log(`Filme ${tmdbMovieId}: ${totalLikes}/${totalParticipants} likes`);
+
   if (totalLikes >= totalParticipants) {
+    
+    console.log("🔥 DEU MATCH! Salvando na sala...");
+
     await prisma.room.update({
-        where: { id: participant.roomId },
-        data: { matchedMovieId: Number(tmdbMovieId), isActive: false } // Opcional: fechar a sala
+      where: { id: participant.roomId },
+      data: { 
+        matchedMovieId: Number(tmdbMovieId), 
+        isActive: false 
+      }
     });
 
     return { 
